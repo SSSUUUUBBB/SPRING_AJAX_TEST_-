@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시글 조회</title>
+</head>
+<body>
+    <h1>게시글 조회</h1>
+    <form>
+        <table>
+            <tr>
+                <td>제목</td>
+                <td>
+                    <input type="text" name="title" th:value="${board.title}" readonly>
+                </td>
+            </tr>
+            <tr>
+                <td>작성자</td>
+                <td>
+                    <input type="text" name="writer" th:value="${board.writer}" readonly>
+                </td>
+            </tr>
+            <tr>
+                <td>내용</td>
+                <td>
+                    <textarea name="content" cols="40" rows="5" th:text="${board.content}" readonly></textarea>
+                </td>
+            </tr>
+        </table>
+        <div style="display: flex;">
+            <button type="button" style="margin-right: 10px;" onclick="moveList()">목록</button>
+            <button type="button" style="margin-right: 10px;" onclick="moveUpdate()">수정</button>
+            <div id="likebutton">
+                <a th:if="${board.like == 0}" th:data="${board.boardNo}" href="javascript:;" id="like-btn" style="text-decoration-line: none; color: black;">&#10084;</a>
+                <a th:if="${board.like == 1}" th:data="${board.boardNo}" href="javascript:;" id="unlike-btn" style="text-decoration-line: none; color: red;">&#10084;</a>
+            </div>
+        </div>
+
+        <h3>댓글 목록</h3>
+        <div id="comment-list">
+
+        </div>
+        <div class="input-box">
+            <div class="top">
+                <h3>댓글 입력</h3>
+            </div>
+            <div class="comment-input">
+                <input type="text" name="writer" id="comment-writer" placeholder="작성자">
+                <br>
+                <textarea name="content" id="comment-content" 
+                          cols="60" rows="5" placeholder="댓글을 작성해주세요"></textarea>
+                <div class="btn-box">
+                    <a href="javascript:;" id="btn-comment-insert" class="btn btn-sm">등록</a>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script>
+        let boardNo = "[[${board.boardNo}]]"
+        getCommentList()
+
+        function moveList() {
+            location.href = "/board/list"
+        }
+
+        function moveUpdate() {
+            location.href = "/board/update?boardNo=" + boardNo
+        }
+
+        function getCommentList(){
+            $.ajax({
+                url : '/comment/list',
+                type : 'GET',
+                data : { boardNo : boardNo },
+                success : function(response) {
+                    let commentList = response
+
+                    let commentData = ''
+                    for (let i = 0; i < commentList.length; i++) {
+                        let comment = commentList[i]
+
+                        let date = new Date(comment.updDate);
+                        let regDate = date.toISOString().split("T")[0];
+                        let regTime = date.toISOString().split("T")[1];
+                        regTime = regTime.split(".")[0]
+
+                        let commentBox 
+                        = `<div class="comment-box">
+                            <table style="border-collapse: collapse; width: 360px;">
+                                <tr>
+                                    <td style="border: 1px solid black; padding: 8px;">작성자</td>
+                                    <td style="border: 1px solid black; padding: 8px;">
+                                        <span class="comment-writer">${comment.writer}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="border: 1px solid black; padding: 8px;">등록(수정)일</td>
+                                    <td style="border: 1px solid black; padding: 8px;">
+                                        <span class="comment-data">${regDate} ${regTime}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="border: 1px solid black; padding: 8px;">내용</td>
+                                    <td style="border: 1px solid black; padding: 8px;">
+                                        <p class="comment-content">${comment.content}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                            <a href="javascript:;" class="btn btn-sm btn-comment-update" data="${comment.commentNo}">수정</a>
+                            <a href="javascript:;" class="btn btn-sm btn-comment-delete" data="${comment.commentNo}">삭제</a>
+                            <div class="edit-box"></div>
+                            </div>
+                            `
+                        commentData += commentBox
+                    }
+
+                    $('#comment-list').html(commentData)
+                    initCommentEvent()
+                },
+                error : function(error){
+
+                }
+
+            })
+        }
+
+        $('#btn-comment-insert').on('click', function() {
+            let writer = $('#comment-writer').val()
+            let content = $('#comment-content').val()
+
+            insertComment( writer, content )
+        })
+
+        function insertComment( writer, content) {
+            let data = {
+                'boardNo'   : boardNo,
+                'writer'    : writer,
+                'content'   : content,
+            }
+
+            $.ajax({
+                url : '/comment/insert',
+                type : 'POST',
+                data : data,
+                success : function(response){
+                    let result = response
+                    if(result > 0){
+                        alert('댓글 등록 !')
+                        getCommentList()
+                        $('#comment-writer').val('')
+                        $('#comment-content').val('')
+                    }
+                },
+                error : function(error){
+
+                }
+            })
+        }
+
+        function initCommentEvent(){
+            //삭제
+            $('.btn-comment-delete').on('click', function(){
+                let commentNo = $(this).attr('data')
+                let check = confirm('댓글을 삭제하시겠습니까')
+                if(!check) return
+
+                $.ajax({
+                    url : '/comment/delete',
+                    type : 'DELETE',
+                    data : {commentNo : commentNo},
+                    success : function(response){
+                        let result = response
+                        if(result > 0){
+                            alert('댓글 삭제 완료!')
+                        }
+                        getCommentList()
+                    },
+                    error : function(error){
+
+                    }
+                })
+            
+            })
+            //수정
+            $('.btn-comment-update').on('click', function(){
+                let commentNo = $(this).attr('data')
+                let commentBox = $(this).parents('.comment-box')
+                let commentWriter = commentBox.find('.comment-writer')
+                let commentContent = commentBox.find('.comment-content')
+
+                let writer = commentWriter.text()
+                let content = commentContent.text()
+
+                $('.edit-box').empty()
+
+                let editBox 
+                = `<div class="top">
+                        <div class="item">
+                            <input type="text" id="input-update-writer" value="${writer}" />
+                        </div>
+                        <div class="item">
+                            
+                        </div>
+                    </div>
+                    <div class="bottom">
+                        <textarea id="input-update-content" cols="40" rows="5">${content}</textarea>
+                        <div class="etc-box">
+                            <a href="javascript:;" class="btn btn-sm" id="btn-comment-update" data="${commentNo}">수정</a>
+                            <a href="javascript:;" class="btn btn-sm" id="btn-comment-cancel">취소</a>
+                        </div>
+                    </div>
+                    `
+                commentBox.find('.edit-box').html(editBox)
+
+                $('#btn-comment-cancel').on('click', function(){
+                    commentBox.find('.edit-box').empty()
+                })
+                $('#btn-comment-update').on('click', function(){
+                    let data = {
+                        commentNo : commentNo,
+                        writer : $('#input-update-writer').val(),
+                        content : $('#input-update-content').val()
+                    }
+                    $.ajax({
+                        url : '/comment/update',
+                        type : 'PUT',
+                        data : data,
+                        success : function(response){
+                            let result = response
+                            if( result > 0 ){
+                                alert('댓글 수정 완료!')
+                            }
+                            getCommentList()
+                        },
+                        error : function(error){
+
+                        }
+                    })
+                })
+            })
+        }
+
+            $(document).on('click','#like-btn', function(){
+                let boardNo = $(this).attr('data')
+                console.log(boardNo)
+                $.ajax({
+                    url : '/board/like',
+                    type : 'POST',
+                    data : {boardNo : boardNo},
+                    success : function(response){},
+                    error : function(error){},
+                    complete : function() {
+                        $('#likebutton').load(location.href+' #likebutton')
+                    }
+                })
+            })
+            $(document).on('click','#unlike-btn', function(){
+                let boardNo = $(this).attr('data')
+                console.log(boardNo)
+                $.ajax({
+                    url : '/board/unlike',
+                    type : 'POST',
+                    data : {boardNo : boardNo},
+                    success : function(response){},
+                    error : function(error){},
+                    complete : function() {
+                        $('#likebutton').load(location.href+' #likebutton')
+                    }
+                })
+            })
+
+    </script>
+</body>
+</html>

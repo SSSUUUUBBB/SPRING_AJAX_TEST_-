@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시글 목록</title>
+</head>
+<body>
+    <h1>게시글 목록</h1>
+    <a href="/board/insert">글쓰기</a>
+    <table border="1">
+        <thead>
+            <tr>
+                <th width="50">번호</th>
+                <th width="300">제목</th>
+                <th width="100">작성자</th>
+                <th width="200">등록일자</th>
+                <th width="200">수정일자</th>
+            </tr>
+        </thead>
+        <tbody id="list-data">
+
+        </tbody>            
+
+        <tfoot>
+            <tr>
+                <td colspan="5">
+                    <div style="text-align: center;">
+                        <a href="javascript:;" class="page-arrow" id="first">&laquo;</a>
+                        <a href="javascript:;" class="page-arrow" id="prev">&lsaquo;</a>
+                        
+                        <span class="page-list">
+                            <a href="javascript:;" class="page-no">1</a>
+                        </span>
+                        
+                        <a href="javascript:;" class="page-arrow" id="next">&rsaquo;</a>
+                        <a href="javascript:;" class="page-arrow" id="last">&raquo;</a>
+                    </div>
+                </td>
+            </tr>
+        </tfoot>
+</table>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script>
+        let page = 1;
+        getPageList(page)
+        initPage(page)
+
+        function getPageList(page){
+            $.ajax({
+                url : '/board/page',
+                type : 'GET',
+                data : {page : page},
+                success : function(response){
+                    let boardList = response
+
+                    if(boardList.length == 0){
+                        let msg = '등록된 게시글이 없습니다'
+                        let tr = `<tr>
+                                    <td colspan="5">${msg}</td>
+                                  </tr>`
+                        $('#list-data').html(tr)          
+                        return
+                    }
+                    let boardData = ''
+                    for(let i = 0; i < boardList.length; i++){
+                        let title = `<a href="/board/read?boardNo=${boardList[i].boardNo}">${boardList[i].title}</a>`
+                        if (boardList[i].like === 1) {
+                            title += `<a id="unlike-btn" style="text-decoration-line: none; color: red;">&#10084;</a>`;
+                        }       
+                                        
+                        const regdate = new Date(boardList[i].regDate)
+                        const regDate = regdate.toISOString().split("T")[0]
+                        const update = new Date(boardList[i].updDate)
+                        const updDate = regdate.toISOString().split("T")[0]
+
+                        let tr = `<tr>
+                                    <td align="center">${boardList[i].boardNo}</td>
+                                    <td>${title}</td>
+                                    <td align="center">${boardList[i].writer}</td>
+                                    <td align="center">${regDate}</td>
+                                    <td align="center">${updDate}</td>`
+                        boardData += tr
+                    }
+                    $('#list-data').html(boardData)
+                },
+                error : function(request, status, error){
+                    alert("code:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
+                }
+            })
+        }
+
+        function initPage(){
+            $.ajax({
+                url : '/board/count',
+                type : 'GET',
+                success : function(response){
+                    let count = response
+                    let totalPage = parseInt( count / 10 )
+                    if(count % 10 > 0){totalPage++;}
+
+                    let pagination = ''
+                    for (let i = 1; i <= totalPage; i++){
+                        let a = `<a href='javascript:;' class='page-no' data='${i}'>${i}</a>`
+                        pagination += a
+                    }
+                    
+                    $('.page-list').html(pagination)
+
+                    $('#first').attr('data',1)
+                    $('#last').attr('data',totalPage)
+                    $('#prev').attr('data', page-1)
+                    $('#next').attr('data', page+1)
+
+                    $('.page-no').removeClass('on')
+                    $('.page-no[data=' + page + ']').addClass('on')
+
+                    $('.page-arrow').show()
+                    if( page == 1 ) { $('#prev').hide() }
+                    if( page == totalPage ) { $('#next').hide() }
+
+                    $('.page-no, .page-arrow').on('click', function() {
+                        $('.page-no, .page-arrow').off()
+                        let clickedPage = $(this).attr('data')
+                        page = parseInt(clickedPage);
+                        initPage(page)
+                        getPageList(page)
+                    })
+                },
+                error           : function(request, status, error){
+                    alert("code:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
+                }
+            })
+        }
+
+    </script>
+</body>
+</html>

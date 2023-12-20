@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- namespace="매퍼 인터페이스 경로" --> 
+<mapper namespace="com.joeun.board.mapper.CommentMapper">
+
+    <select id="list" resultType="Comment">
+        SELECT * FROM comment WHERE board_no = #{boardNo} ORDER BY reg_date DESC
+    </select>
+
+    <insert id="insert">
+        INSERT INTO comment( board_no, writer, content)
+        VALUES ( #{boardNo}, #{writer}, #{content} )
+    </insert>
+
+    <update id="update">
+        UPDATE comment SET writer = #{writer}, content = #{content} WHERE comment_no = #{commentNo}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM comment WHERE comment_no = #{commentNo}
+    </delete>
+    
+</mapper>
